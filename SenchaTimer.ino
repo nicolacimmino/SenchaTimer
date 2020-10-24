@@ -5,8 +5,8 @@
 #define LED_GND 15
 #define LED_D 16
 #define LEDS_COUNT 1
-#define SW_GND 7
-#define SW_PIN 9
+#define SW_GND 9
+#define SW_PIN 7
 #define MAX_INFUSIONS 5
 #define TIME_LED_IX 0
 
@@ -96,12 +96,46 @@ void showEnd()
   }
 }
 
+void showReset()
+{
+  for (uint8_t ix = 0; ix < 10; ix++)
+  {
+    led[TIME_LED_IX] = (ix % 2) ? CRGB::Purple : CRGB::Blue;
+    FastLED.show();
+    delay(200);
+  }
+}
+
+unsigned long pressStartTime = 0;
+
 void loop()
 {
-  if (digitalRead(SW_PIN) == LOW && !running)
+  if (digitalRead(SW_PIN) == LOW)
   {
-    running = true;
-    infusionStartTime = millis();
+    if (!running)
+    {
+      running = true;
+      infusionStartTime = millis();
+      return;
+    }
+
+    if (pressStartTime == 0)
+    {
+      pressStartTime = millis();
+    }
+
+    if (digitalRead(SW_PIN) == LOW && millis() - pressStartTime > 1000)
+    {
+      running = false;
+      infusionsCount = 0;
+      showReset();
+      return;
+    }
+  }
+
+  if (digitalRead(SW_PIN) == HIGH)
+  {
+    pressStartTime = 0;
   }
 
   if (!running)
