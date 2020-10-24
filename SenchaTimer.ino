@@ -145,7 +145,7 @@ void loop()
   else
   {
     breathe();
-    if (millis() - infusionStartTime > (1000 * infusionTimes[infusionsCount]))
+    if (millis() - infusionStartTime > (1000.0 * infusionTimes[infusionsCount]))
     {
       running = false;
       showEnd();
