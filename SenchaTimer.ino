@@ -1,11 +1,10 @@
 #include <Arduino.h>
-#include <avr/sleep.h>
 #include <FastLED.h>
+#include <avr/sleep.h>
 
 #define LED_GND 15
 #define LED_D 16
 #define LEDS_COUNT 1
-#define SW_GND 9
 #define SW_PIN 7
 #define MAX_INFUSIONS 5
 #define TIME_LED_IX 0
@@ -41,9 +40,6 @@ void setup()
 
   FastLED.show();
 
-  pinMode(SW_GND, OUTPUT);
-  digitalWrite(SW_GND, LOW);
-
   pinMode(SW_PIN, INPUT_PULLUP);
 }
 
@@ -74,6 +70,7 @@ void showCurrentInfusion()
 
   led[TIME_LED_IX] = CRGB::Green;
   FastLED.show();
+  
 }
 
 void breathe()
@@ -126,9 +123,9 @@ void loop()
 
     if (digitalRead(SW_PIN) == LOW && millis() - pressStartTime > 1000)
     {
-      running = false;
-      infusionsCount = 0;
+      running = false;      
       showReset();
+      
       return;
     }
   }
