@@ -28,14 +28,14 @@ void setup()
 {
   pinMode(LED_GND, OUTPUT);
   digitalWrite(LED_GND, LOW);
-  delay(100);
+  delay(300);
 
   FastLED.addLeds<WS2812B, LED_D, GRB>(led, LEDS_COUNT);
   FastLED.setBrightness(70);
 
   for (int ix = 0; ix < LEDS_COUNT; ix++)
   {
-    led[ix] = CRGB::Green;
+    led[ix] = CRGB::Black;
   }
 
   FastLED.show();
