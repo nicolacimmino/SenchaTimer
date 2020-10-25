@@ -20,7 +20,7 @@
 
 #include <Arduino.h>
 #include <FastLED.h>
-#include <avr/sleep.h>
+#include <Sleep_n0m1.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //  Hardware.
@@ -56,10 +56,12 @@ uint16_t infusionTimes[MAX_INFUSIONS] = {
 //  Globals.
 //
 
-CRGB led[LEDS_COUNT];       
-uint8_t infusionsCount = 0; 
+CRGB led[LEDS_COUNT];
+uint8_t infusionsCount = 0;
 unsigned long infusionStartTime = 0;
+unsigned long lastInfusionEndTime = 0;
 unsigned long pressStartTime = 0;
+Sleep sleep;
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -168,7 +170,7 @@ void lightShow(CRGB color1, CRGB color2, uint8_t repetitions, uint16_t delaymS)
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Reset the current infusion.
-// This stops the current infusion but doesn't reset the count. The operation is aknoweledged 
+// This stops the current infusion but doesn't reset the count. The operation is aknoweledged
 // by a green/yellow flashing pattern.
 
 void resetCurrentInfusion()
@@ -183,15 +185,51 @@ void resetCurrentInfusion()
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // End the current infusion.
-// This ends the infusion and increments the current infusion to the next. The operation is 
+// This ends the infusion and increments the current infusion to the next. The operation is
 // aknoweledged by a orange/yellow flashing pattern.
 
 void endInfusion()
 {
   infusionStartTime = 0;
-  infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
 
   lightShow(CRGB::Orange, CRGB::Yellow, 10, 200);
+
+  if (infusionsCount == MAX_INFUSIONS - 1)
+  {
+    enterLowPowerIdling();
+  }
+
+  infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
+}
+
+//
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Enter a low power mode and just flash red every 8s.
+// During sleep the LED power is removed and the controller is in power save mode.
+// To start a new infusion user will need to power-cycle the device.
+//
+
+void enterLowPowerIdling()
+{
+  while (true)
+  {
+    led[TIME_LED_IX] = CRGB::Red;
+    FastLED.show();
+    delay(100);
+    led[TIME_LED_IX] = CRGB::Black;
+    FastLED.show();
+
+    pinMode(LED_GND_PIN, INPUT);
+
+    sleep.pwrDownMode();
+    sleep.sleepDelay(8000);
+
+    pinMode(LED_GND_PIN, OUTPUT);
+    digitalWrite(LED_GND_PIN, LOW);
+    delay(300);
+  }
 }
 
 //
@@ -254,10 +292,10 @@ void loop()
 {
   checkBrutton();
 
-  if (infusionStartTime != 0)
+  if (infusionStartTime == 0)
   {
     showCurrentInfusion();
-    
+
     return;
   }
 
