@@ -20,9 +20,9 @@ uint16_t infusionTimes[] = {
 };
 
 uint8_t infusionsCount = 0;
-
 bool running = false;
 unsigned long infusionStartTime = 0;
+unsigned long pressStartTime = 0;
 
 void setup()
 {
@@ -70,10 +70,9 @@ void showCurrentInfusion()
 
   led[TIME_LED_IX] = CRGB::Green;
   FastLED.show();
-  
 }
 
-void breathe()
+void showTimerRunning()
 {
   // Keep breathing! See Sean Voisen great post from which I grabbed the formula.
   // https://sean.voisen.org/blog/2011/10/breathing-led-with-arduino/
@@ -83,70 +82,75 @@ void breathe()
   FastLED.show();
 }
 
+void lightShow(CRGB color1, CRGB color2, uint8_t repetitions, uint16_t delaymS)
+{
+  for (uint8_t ix = 0; ix < repetitions; ix++)
+  {
+    led[TIME_LED_IX] = (ix % 2) ? color1 : color2;
+    FastLED.show();
+    delay(delaymS);
+  }
+}
+
 void showEnd()
 {
-  for (uint8_t ix = 0; ix < 10; ix++)
-  {
-    led[TIME_LED_IX] = (ix % 2) ? CRGB::Orange : CRGB::Black;
-    FastLED.show();
-    delay(200);
-  }
+  lightShow(CRGB::Orange, CRGB::Black, 10, 200);
 }
 
 void showReset()
 {
-  for (uint8_t ix = 0; ix < 10; ix++)
-  {
-    led[TIME_LED_IX] = (ix % 2) ? CRGB::Purple : CRGB::Blue;
-    FastLED.show();
-    delay(200);
-  }
+  lightShow(CRGB::Purple, CRGB::Blue, 10, 200);
 }
 
-unsigned long pressStartTime = 0;
-
-void loop()
+void checkBrutton()
 {
-  if (digitalRead(SW_PIN) == LOW)
-  {
-    if (!running)
-    {
-      running = true;
-      infusionStartTime = millis();
-      return;
-    }
-
-    if (pressStartTime == 0)
-    {
-      pressStartTime = millis();
-    }
-
-    if (digitalRead(SW_PIN) == LOW && millis() - pressStartTime > 1000)
-    {
-      running = false;      
-      showReset();
-      
-      return;
-    }
-  }
-
   if (digitalRead(SW_PIN) == HIGH)
   {
     pressStartTime = 0;
+    return;
+  }
+
+  if (pressStartTime == 0)
+  {
+    pressStartTime = millis();
+  }
+
+  if (digitalRead(SW_PIN) == LOW && millis() - pressStartTime > 1000)
+  {
+    running = false;
+    showReset();
+
+    return;
   }
 
   if (!running)
   {
-    showCurrentInfusion();
+    running = true;
+    infusionStartTime = millis();
   }
-  else
+}
+
+void checkInfusionEnd()
+{
+  if (millis() - infusionStartTime > (1000.0 * infusionTimes[infusionsCount]))
   {
-    breathe();
-    if (millis() - infusionStartTime > (1000.0 * infusionTimes[infusionsCount]))
-    {
-      running = false;
-      showEnd();
-      infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
-    }
+    running = false;
+    showEnd();
+    infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
   }
+}
+
+void loop()
+{
+  checkBrutton();
+
+  if (!running)
+  {
+    showCurrentInfusion();
+    return;
+  }
+
+  showTimerRunning();
+
+  checkInfusionEnd();
 }
