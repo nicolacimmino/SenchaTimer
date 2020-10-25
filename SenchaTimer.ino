@@ -48,10 +48,10 @@ void showCurrentInfusion()
   led[TIME_LED_IX] = CRGB::Green;
 
   uint16_t timeSlot = (millis() % 3000) / 200;
-  
+
   if (timeSlot > (2 * (infusionsCount + 1)) || timeSlot % 2 == 0)
-  {    
-    led[TIME_LED_IX].fadeToBlackBy(220);   
+  {
+    led[TIME_LED_IX].fadeToBlackBy(240);
   }
 
   FastLED.show();
@@ -59,10 +59,15 @@ void showCurrentInfusion()
 
 void showTimerRunning()
 {
+
+  float infusionProgress = (millis() - infusionStartTime) / (1000.0 * infusionTimes[infusionsCount]);
+
+  led[TIME_LED_IX] = CHSV(64 + (infusionProgress * 32), 255, 255);
+
   // Keep breathing! See Sean Voisen great post from which I grabbed the formula.
   // https://sean.voisen.org/blog/2011/10/breathing-led-with-arduino/
   float val = (exp(sin(millis() / 2000.0 * PI)) - 0.36787944) * 108.0;
-  led[TIME_LED_IX] = CRGB::Green;
+
   led[TIME_LED_IX].fadeToBlackBy(val);
   FastLED.show();
 }
