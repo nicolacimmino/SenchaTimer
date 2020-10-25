@@ -31,7 +31,7 @@ void setup()
   delay(100);
 
   FastLED.addLeds<WS2812B, LED_D, GRB>(led, LEDS_COUNT);
-  FastLED.setBrightness(90);
+  FastLED.setBrightness(70);
 
   for (int ix = 0; ix < LEDS_COUNT; ix++)
   {
@@ -45,30 +45,15 @@ void setup()
 
 void showCurrentInfusion()
 {
-  uint16_t timeOffset = (millis() % 3000) / 200;
-
-  if (timeOffset > 10)
-  {
-    led[TIME_LED_IX] = CRGB::Black;
-    FastLED.show();
-    return;
-  }
-
-  if (timeOffset > (2 * (infusionsCount + 1)))
-  {
-    led[TIME_LED_IX] = CRGB::Black;
-    FastLED.show();
-    return;
-  }
-
-  if (timeOffset % 2 == 0)
-  {
-    led[TIME_LED_IX] = CRGB::Black;
-    FastLED.show();
-    return;
-  }
-
   led[TIME_LED_IX] = CRGB::Green;
+
+  uint16_t timeSlot = (millis() % 3000) / 200;
+  
+  if (timeSlot > (2 * (infusionsCount + 1)) || timeSlot % 2 == 0)
+  {    
+    led[TIME_LED_IX].fadeToBlackBy(220);   
+  }
+
   FastLED.show();
 }
 
@@ -94,12 +79,12 @@ void lightShow(CRGB color1, CRGB color2, uint8_t repetitions, uint16_t delaymS)
 
 void showEnd()
 {
-  lightShow(CRGB::Orange, CRGB::Black, 10, 200);
+  lightShow(CRGB::Orange, CRGB::Yellow, 10, 200);
 }
 
 void showReset()
 {
-  lightShow(CRGB::Purple, CRGB::Blue, 10, 200);
+  lightShow(CRGB::Green, CRGB::Yellow, 10, 200);
 }
 
 void checkBrutton()
