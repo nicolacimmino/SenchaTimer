@@ -77,12 +77,7 @@ void setup()
 
   FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(led, LEDS_COUNT);
   FastLED.setBrightness(70);
-
-  for (int ix = 0; ix < LEDS_COUNT; ix++)
-  {
-    led[ix] = CRGB::Black;
-  }
-
+  led[TIME_LED_IX] = CRGB::Black;
   FastLED.show();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
