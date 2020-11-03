@@ -18,6 +18,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <EEPROM.h>
 #include <Arduino.h>
 #include <FastLED.h>
 #include <Sleep_n0m1.h>
@@ -31,6 +32,7 @@
 #define LEDS_COUNT 1
 #define TIME_LED_IX 0
 #define BUTTON_PIN 7
+#define EEPROM_INFUSIONS_COUNT 0
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +82,8 @@ void setup()
   FastLED.show();
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  infusionsCount = min(EEPROM.read(EEPROM_INFUSIONS_COUNT), MAX_INFUSIONS);
 }
 
 //
@@ -171,7 +175,7 @@ void resetCurrentInfusion()
 {
   infusionStartTime = 0;
 
-  lightShow(CRGB::Green, CRGB::Yellow, 10, 200);
+  lightShow(CRGB::Blue, CRGB::Violet, 10, 200);
 }
 
 //
@@ -188,12 +192,29 @@ void endInfusion()
 
   lightShow(CRGB::Orange, CRGB::Yellow, 10, 200);
 
-  if (infusionsCount == MAX_INFUSIONS - 1)
+  infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
+
+  EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
+
+  if (infusionsCount == 0)
   {
     enterLowPowerIdling();
   }
+}
 
-  infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
+//
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+// Resets the timer to the beginnig of the first infusion.
+
+void resetInfusions()
+{
+  infusionsCount = 0;
+
+  EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
+
+  lightShow(CRGB::Red, CRGB::Green, 10, 200);
 }
 
 //
@@ -229,12 +250,12 @@ void enterLowPowerIdling()
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Test the button and take action.
 // Regular Mode:
 //  When no infusion running:
 //    Short press: will start the infusion.
+//    Long press: will reset the timer to the start of the first infusion.
 //  When infusion running:
 //    Long press: will stop and reset the infustion and maintain the current infusions count.
 
@@ -247,8 +268,14 @@ void click()
 }
 
 void longPress()
-{  
-  resetCurrentInfusion();
+{
+  if (infusionStartTime != 0)
+  {
+    resetCurrentInfusion();
+    return;
+  }
+
+  resetInfusions();
 }
 
 void checkBrutton()
