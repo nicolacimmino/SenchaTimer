@@ -206,15 +206,56 @@ void endInfusion()
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+// Asks a yes/no question.
+// It will first show red/green in quick succession until the button is released.
+// Then alternatively green and red every 2s. Returns true or false according to the
+//  current color displayed when the button is pressed.
+
+bool askYesNoQuestion()
+{
+  unsigned long questionStartTime;
+  bool answer = false;
+
+  while (digitalRead(BUTTON_PIN) == LOW)
+  {
+    lightShow(CRGB::Green, CRGB::Red, 2, 100);
+  }
+
+  while (true)
+  {
+    questionStartTime = millis();
+
+    led[TIME_LED_IX] = answer ? CRGB::Green : CRGB::Red;
+    FastLED.show();
+
+    while (millis() < questionStartTime + 2000)
+    {
+      if (digitalRead(BUTTON_PIN) == LOW)
+      {
+        return answer;
+      }
+    }
+
+    answer = !answer;
+  }
+}
+
+//
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 // Resets the timer to the beginnig of the first infusion.
 
 void resetInfusions()
 {
-  infusionsCount = 0;
+  if (askYesNoQuestion())
+  {
+    infusionsCount = 0;
 
-  EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
+    EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
-  lightShow(CRGB::Green, CRGB::Red, 10, 200);
+    lightShow(CRGB::Green, CRGB::Blue, 10, 200);
+  }
 }
 
 //
