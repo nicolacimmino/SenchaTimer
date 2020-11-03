@@ -60,7 +60,6 @@ CRGB led[LEDS_COUNT];
 uint8_t infusionsCount = 0;
 unsigned long infusionStartTime = 0;
 unsigned long lastInfusionEndTime = 0;
-unsigned long pressStartTime = 0;
 Sleep sleep;
 
 //
@@ -230,36 +229,54 @@ void enterLowPowerIdling()
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Test the button and take action.
-// A short press while the infusion is not running will start it.
-// A long press will reset stop the infustion and maintain the current infusions count.
+// Regular Mode:
+//  When no infusion running:
+//    Short press: will start the infusion.
+//  When infusion running:
+//    Long press: will stop and reset the infustion and maintain the current infusions count.
 
-void checkBrutton()
+void click()
 {
-  if (digitalRead(BUTTON_PIN) == HIGH)
-  {
-    pressStartTime = 0;
-
-    return;
-  }
-
-  if (pressStartTime == 0)
-  {
-    pressStartTime = millis();
-  }
-
-  if (digitalRead(BUTTON_PIN) == LOW && millis() - pressStartTime > 1000)
-  {
-    resetCurrentInfusion();
-
-    return;
-  }
-
   if (infusionStartTime == 0)
   {
     infusionStartTime = millis();
   }
+}
+
+void longPress()
+{  
+  resetCurrentInfusion();
+}
+
+void checkBrutton()
+{
+  unsigned long pressStartTime = 0;
+
+  if (digitalRead(BUTTON_PIN) == HIGH)
+  {
+    return;
+  }
+
+  pressStartTime = millis();
+
+  while (digitalRead(BUTTON_PIN) == LOW)
+  {
+    if (millis() - pressStartTime > 1000)
+    {
+      longPress();
+
+      while (digitalRead(BUTTON_PIN) == LOW)
+      {
+      }
+
+      return;
+    }
+  }
+
+  click();
 }
 
 //
