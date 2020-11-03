@@ -175,7 +175,7 @@ void resetCurrentInfusion()
 {
   infusionStartTime = 0;
 
-  lightShow(CRGB::Blue, CRGB::Violet, 10, 200);
+  lightShow(CRGB::Green, CRGB::Violet, 10, 200);
 }
 
 //
@@ -214,7 +214,7 @@ void resetInfusions()
 
   EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
-  lightShow(CRGB::Red, CRGB::Green, 10, 200);
+  lightShow(CRGB::Green, CRGB::Red, 10, 200);
 }
 
 //
