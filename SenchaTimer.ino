@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 //  Sencha Timer.
-//  Copyright (C) 2014 Nicola Cimmino
+//  Copyright (C) 2020 Nicola Cimmino
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -175,7 +175,7 @@ void resetCurrentInfusion()
 {
   infusionStartTime = 0;
 
-  lightShow(CRGB::Green, CRGB::Violet, 10, 200);
+  lightShow(CRGB::Green, CRGB::Yellow, 10, 200);
 }
 
 //
@@ -254,7 +254,7 @@ void resetInfusions()
 
     EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
-    lightShow(CRGB::Green, CRGB::Blue, 10, 200);
+    lightShow(CRGB::Green, CRGB::Black, 10, 200);
   }
 }
 
