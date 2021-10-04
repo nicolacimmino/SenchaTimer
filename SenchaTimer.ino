@@ -51,6 +51,14 @@ uint16_t infusionTimes[MAX_INFUSIONS] = {
     180,
 };
 
+uint8_t temperature[MAX_INFUSIONS] = {
+    70,
+    75,
+    80,
+    85,
+    85,
+};
+
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -108,7 +116,10 @@ void setup()
 
 void showCurrentInfusion()
 {
-  led[TIME_LED_IX] = CRGB::Green;
+  // Temperature range 70 - 90C => 20
+  // Color range: Green (96) - Red (255) => 159
+  // Hue = 159 * ((temp - 70) / 20) + 96
+  led[TIME_LED_IX] = CHSV(96 + 159 * ((temperature[infusionsCount] - 70) / 20.0), 255, 255);
 
   uint16_t timeSlot = (millis() % 3000) / 200;
 
