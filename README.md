@@ -11,7 +11,7 @@ For the type of Sencha I got I came to the following infusion times, depending o
 | 2 | 0:30  | 75 |
 | 3 | 0:45  | 80 |
 | 4 | 1:30  | 85 |
-| 5 | 3:00  | 90 |
+| 5 | 3:00  | 85 |
 
 Below is a picture of the timer, which I chose to encase in a vending machine button toy replica. I should get around printing a label for it that actualyl reads Sencha, I know I know.
 
