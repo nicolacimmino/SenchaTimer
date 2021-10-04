@@ -20,7 +20,10 @@ Below is a picture of the timer, which I chose to encase in a vending machine bu
 
 The timer can be operated as follows:
 
-- On power up it will flash the number of the current infusion
+- On power up it will flash the number of the current infusions, the color of the flashes will indicate the infusion temperature whit the following colors:
+
+![Temperature](documentation/temperature.png)
+
 - Press the button as soon as the water is poured
 - The time will start to breath a yellow light that will gently fade towards green as the infusion progresses
 - When the time is up the timer will flash green fast few times, pour the tea in the cup
