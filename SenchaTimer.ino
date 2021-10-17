@@ -33,6 +33,7 @@
 #define TIME_LED_IX 0
 #define BUTTON_PIN 7
 #define EEPROM_INFUSIONS_COUNT 0
+#define EEPROM_TEA_TYPE 1
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,21 +43,49 @@
 //
 
 #define MAX_INFUSIONS 5
+#define MAX_TEA_TYPES 2
+#define MODE_INFUSION 0
+#define MODE_TEA_SELECTION 1
 
-uint16_t infusionTimes[MAX_INFUSIONS] = {
-    90,
-    30,
-    45,
-    90,
-    180,
-};
+uint16_t infusionTimes[MAX_TEA_TYPES][MAX_INFUSIONS] = {
+    {
+        // Sencha
+        90,
+        30,
+        45,
+        90,
+        180,
+    },
+    {
+        // Gyokuro
+        60 * 7,
+        15,
+        30,
+        60,
+        90,
+    }};
 
-uint8_t temperature[MAX_INFUSIONS] = {
-    70,
-    75,
-    80,
-    85,
-    85,
+uint8_t temperature[MAX_TEA_TYPES][MAX_INFUSIONS] = {
+    {
+        // Sencha
+        70,
+        75,
+        80,
+        85,
+        85,
+    },
+    {
+        // Gyokuro
+        0, // Room temperature
+        50,
+        60,
+        70,
+        70,
+    }};
+
+CRGB teaTypeColors[MAX_TEA_TYPES] = {
+    CRGB::Red,
+    CRGB::Blue,
 };
 
 //
@@ -67,6 +96,8 @@ uint8_t temperature[MAX_INFUSIONS] = {
 //
 
 CRGB led[LEDS_COUNT];
+uint8_t mode = MODE_INFUSION;
+uint8_t teaType = 0;
 uint8_t infusionsCount = 0;
 unsigned long infusionStartTime = 0;
 unsigned long lastInfusionEndTime = 0;
@@ -91,7 +122,24 @@ void setup()
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  infusionsCount = min(EEPROM.read(EEPROM_INFUSIONS_COUNT), MAX_INFUSIONS);
+  infusionsCount = min(EEPROM.read(EEPROM_INFUSIONS_COUNT), MAX_INFUSIONS - 1);
+  teaType = min(EEPROM.read(EEPROM_TEA_TYPE), MAX_TEA_TYPES - 1);
+
+  showCurrentTeaType();
+
+  // Powerup with button pressed to enter tea selection mode.
+  if (digitalRead(BUTTON_PIN) == LOW)
+  {
+    mode = MODE_TEA_SELECTION;
+    while (digitalRead(BUTTON_PIN) == LOW)
+    {
+      delay(100);
+    }
+  }
+  else
+  {
+    delay(2000);
+  }
 }
 
 //
@@ -119,7 +167,15 @@ void showCurrentInfusion()
   // Temperature range 70 - 90C => 20
   // Color range: Green (96) - Red (255) => 159
   // Hue = 159 * ((temp - 70) / 20) + 96
-  led[TIME_LED_IX] = CHSV(96 + 159 * ((temperature[infusionsCount] - 70) / 20.0), 255, 255);
+  if ((temperature[teaType][infusionsCount] != 0))
+  {
+    led[TIME_LED_IX] = CHSV(96 + 159 * ((temperature[teaType][infusionsCount] - 70) / 20.0), 255, 255);
+  }
+  else
+  {
+    // Zero indicates room temperature infusion, use black so we don't need to stretch too much the range above.
+    led[TIME_LED_IX] = CRGB::White;
+  }
 
   uint16_t timeSlot = (millis() % 3000) / 200;
 
@@ -144,7 +200,7 @@ void showCurrentInfusion()
 void showTimerRunning()
 {
 
-  float infusionProgress = (millis() - infusionStartTime) / (1000.0 * infusionTimes[infusionsCount]);
+  float infusionProgress = (millis() - infusionStartTime) / (1000.0 * infusionTimes[teaType][infusionsCount]);
 
   led[TIME_LED_IX] = CHSV(64 + (infusionProgress * 32), 255, 255);
 
@@ -313,24 +369,40 @@ void enterLowPowerIdling()
 
 void click()
 {
-  if (infusionStartTime == 0)
+  switch (mode)
   {
-    infusionStartTime = millis();
+  case MODE_INFUSION:
+    if (infusionStartTime == 0)
+    {
+      infusionStartTime = millis();
+    }
+
+    break;
+  case MODE_TEA_SELECTION:
+    teaType = (teaType + 1) % MAX_TEA_TYPES;
+    EEPROM.write(EEPROM_TEA_TYPE, teaType);
+
+    break;
   }
 }
 
 void longPress()
 {
-  if (infusionStartTime != 0)
+  switch (mode)
   {
-    resetCurrentInfusion();
-    return;
-  }
+  case MODE_INFUSION:
+    if (infusionStartTime != 0)
+    {
+      resetCurrentInfusion();
+      return;
+    }
 
-  resetInfusions();
+    resetInfusions();
+    break;
+  }
 }
 
-void checkBrutton()
+void checkButton()
 {
   unsigned long pressStartTime = 0;
 
@@ -366,7 +438,7 @@ void checkBrutton()
 
 void checkInfusionEnd()
 {
-  if (millis() - infusionStartTime > (1000.0 * infusionTimes[infusionsCount]))
+  if (millis() - infusionStartTime > (1000.0 * infusionTimes[teaType][infusionsCount]))
   {
     endInfusion();
   }
@@ -376,12 +448,24 @@ void checkInfusionEnd()
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+// Show the currently selected tea type
+
+void showCurrentTeaType()
+{
+  led[TIME_LED_IX] = teaTypeColors[teaType];
+  FastLED.show();
+}
+
+//
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 // Main loop.
 // Keep checking the input button and run the timer if needed.
 
-void loop()
+void infusionLoop()
 {
-  checkBrutton();
+  checkButton();
 
   if (infusionStartTime == 0)
   {
@@ -393,6 +477,28 @@ void loop()
   showTimerRunning();
 
   checkInfusionEnd();
+}
+
+void teaSelectionLoop()
+{
+  checkButton();
+
+  showCurrentTeaType();
+
+  delay(50);
+}
+
+void loop()
+{
+  switch (mode)
+  {
+  case MODE_INFUSION:
+    infusionLoop();
+    break;
+  case MODE_TEA_SELECTION:
+    teaSelectionLoop();
+    break;
+  }
 }
 
 //
