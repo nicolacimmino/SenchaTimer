@@ -43,7 +43,7 @@
 //
 
 #define MAX_INFUSIONS 5
-#define MAX_TEA_TYPES 2
+#define MAX_TEA_TYPES 6
 #define MODE_INFUSION 0
 #define MODE_TEA_SELECTION 1
 
@@ -107,11 +107,39 @@ void setupDefaultTeas()
   EEPROM.write(17, 70);
   EEPROM.write(18, 90 / 5);
   EEPROM.write(19, 70);
+
+  // Test only
+  EEPROM.write(20, 2);
+  EEPROM.write(21, 80);
+  EEPROM.write(22, 0);
+  EEPROM.write(23, 0);
+
+  EEPROM.write(30, 2);
+  EEPROM.write(31, 80);
+  EEPROM.write(32, 0);
+  EEPROM.write(33, 0);
+
+  EEPROM.write(40, 2);
+  EEPROM.write(41, 80);
+  EEPROM.write(42, 0);
+  EEPROM.write(43, 0);
+  
+  EEPROM.write(50, 2);
+  EEPROM.write(51, 80);
+  EEPROM.write(52, 0);
+  EEPROM.write(53, 0);
+
+  // End marker
+  EEPROM.write(60, 0);
 }
 
 CRGB teaTypeColors[MAX_TEA_TYPES] = {
     CRGB::Red,
     CRGB::Blue,
+    CRGB::Yellow,
+    CRGB::Green,
+    CRGB::White,
+    CRGB::Purple,    
 };
 
 uint16_t getInfusionTime()
@@ -286,6 +314,12 @@ void endInfusion()
 
   infusionsCount = (infusionsCount + 1) % MAX_INFUSIONS;
 
+  // End marker, following infusions are not set
+  if (getInfusionTime() == 0)
+  {
+    infusionsCount = 0;
+  }
+
   EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
   if (infusionsCount == 0)
@@ -405,7 +439,18 @@ void click()
     break;
   case MODE_TEA_SELECTION:
     teaType = (teaType + 1) % MAX_TEA_TYPES;
+
+    // End marker, following tea types are not set
+    if (getInfusionTime() == 0)
+    {
+      teaType = 0;
+    }
+
     EEPROM.write(EEPROM_TEA_TYPE, teaType);
+
+    infusionsCount = 0;
+
+    EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
     break;
   }
