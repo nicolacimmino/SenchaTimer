@@ -32,61 +32,20 @@
 #define LEDS_COUNT 1
 #define TIME_LED_IX 0
 #define BUTTON_PIN 7
-#define EEPROM_INFUSIONS_COUNT 0
-#define EEPROM_TEA_TYPE 1
+#define EEPROM_INFUSIONS_COUNT 0x100
+#define EEPROM_TEA_TYPE 0x101
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//  Infusion control.
+//  Consts.
 //
 
 #define MAX_INFUSIONS 5
 #define MAX_TEA_TYPES 2
 #define MODE_INFUSION 0
 #define MODE_TEA_SELECTION 1
-
-uint16_t infusionTimes[MAX_TEA_TYPES][MAX_INFUSIONS] = {
-    {
-        // Sencha
-        90,
-        30,
-        45,
-        90,
-        180,
-    },
-    {
-        // Gyokuro
-        60 * 7,
-        15,
-        30,
-        60,
-        90,
-    }};
-
-uint8_t temperature[MAX_TEA_TYPES][MAX_INFUSIONS] = {
-    {
-        // Sencha
-        70,
-        75,
-        80,
-        85,
-        85,
-    },
-    {
-        // Gyokuro
-        0, // Room temperature
-        50,
-        60,
-        70,
-        70,
-    }};
-
-CRGB teaTypeColors[MAX_TEA_TYPES] = {
-    CRGB::Red,
-    CRGB::Blue,
-};
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,6 +61,69 @@ uint8_t infusionsCount = 0;
 unsigned long infusionStartTime = 0;
 unsigned long lastInfusionEndTime = 0;
 Sleep sleep;
+
+//
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+//  Infusion control.
+//
+//  EEPROM Map.
+//
+//  0         Tea 1 infusion 1 time (seconds/5)
+//  1         Tea 1 infustion 1 temperature (C)
+//  2         Tea 1 infusion 2 time (seconds/5)
+//  3         Tea 1 infustion 2 temperature (C)
+//  ...
+//  10        Tea 2 infusion 1 time (seconds/5)
+//  ...
+
+#define EEPROM_INFUSION_CFG_BASE 0
+#define EEPROM_INFUSION_CFG_ENTRY_SIZE 2
+#define EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE (EEPROM_INFUSION_CFG_ENTRY_SIZE * MAX_INFUSIONS)
+
+void setupDefaultTeas()
+{
+  // Sencha
+  EEPROM.write(0, 90 / 5);
+  EEPROM.write(1, 70);
+  EEPROM.write(2, 30 / 5);
+  EEPROM.write(3, 75);
+  EEPROM.write(4, 45 / 5);
+  EEPROM.write(5, 80);
+  EEPROM.write(6, 90 / 5);
+  EEPROM.write(7, 85);
+  EEPROM.write(8, 180 / 5);
+  EEPROM.write(9, 85);
+
+  // Gyokuro
+  EEPROM.write(10, 420 / 5);
+  EEPROM.write(11, 0);
+  EEPROM.write(12, 15 / 5);
+  EEPROM.write(13, 50);
+  EEPROM.write(14, 39 / 5);
+  EEPROM.write(15, 60);
+  EEPROM.write(16, 60 / 5);
+  EEPROM.write(17, 70);
+  EEPROM.write(18, 90 / 5);
+  EEPROM.write(19, 70);
+}
+
+CRGB teaTypeColors[MAX_TEA_TYPES] = {
+    CRGB::Red,
+    CRGB::Blue,
+};
+
+uint16_t getInfusionTime()
+{
+  Serial.println(5 * EEPROM.read(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount)));
+  return 5 * EEPROM.read(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount));
+}
+
+uint16_t getInfusionTemperature()
+{
+  return EEPROM.read(EEPROM_INFUSION_CFG_BASE + 1 + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount));
+}
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,6 +162,9 @@ void setup()
   {
     delay(2000);
   }
+
+  // Uncomment to program EEPROM first time.
+  setupDefaultTeas();
 }
 
 //
@@ -167,9 +192,9 @@ void showCurrentInfusion()
   // Temperature range 70 - 90C => 20
   // Color range: Green (96) - Red (255) => 159
   // Hue = 159 * ((temp - 70) / 20) + 96
-  if ((temperature[teaType][infusionsCount] != 0))
+  if ((getInfusionTemperature() != 0))
   {
-    led[TIME_LED_IX] = CHSV(96 + 159 * ((temperature[teaType][infusionsCount] - 70) / 20.0), 255, 255);
+    led[TIME_LED_IX] = CHSV(96 + 159 * ((getInfusionTemperature() - 70) / 20.0), 255, 255);
   }
   else
   {
@@ -200,7 +225,7 @@ void showCurrentInfusion()
 void showTimerRunning()
 {
 
-  float infusionProgress = (millis() - infusionStartTime) / (1000.0 * infusionTimes[teaType][infusionsCount]);
+  float infusionProgress = (millis() - infusionStartTime) / (1000.0 * getInfusionTime());
 
   led[TIME_LED_IX] = CHSV(64 + (infusionProgress * 32), 255, 255);
 
@@ -438,7 +463,7 @@ void checkButton()
 
 void checkInfusionEnd()
 {
-  if (millis() - infusionStartTime > (1000.0 * infusionTimes[teaType][infusionsCount]))
+  if (millis() - infusionStartTime > (1000.0 * getInfusionTime()))
   {
     endInfusion();
   }
