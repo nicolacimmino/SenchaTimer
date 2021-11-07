@@ -46,6 +46,7 @@
 #define MAX_TEA_TYPES 6
 #define MODE_INFUSION 0
 #define MODE_TEA_SELECTION 1
+#define MODE_TEA_PROGRAM_TEMPERATURE 2
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,7 +124,7 @@ void setupDefaultTeas()
   EEPROM.write(41, 80);
   EEPROM.write(42, 0);
   EEPROM.write(43, 0);
-  
+
   EEPROM.write(50, 2);
   EEPROM.write(51, 80);
   EEPROM.write(52, 0);
@@ -139,7 +140,7 @@ CRGB teaTypeColors[MAX_TEA_TYPES] = {
     CRGB::Yellow,
     CRGB::Green,
     CRGB::White,
-    CRGB::Purple,    
+    CRGB::Purple,
 };
 
 uint16_t getInfusionTime()
@@ -148,9 +149,21 @@ uint16_t getInfusionTime()
   return 5 * EEPROM.read(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount));
 }
 
-uint16_t getInfusionTemperature()
+uint8_t getInfusionTemperature()
 {
   return EEPROM.read(EEPROM_INFUSION_CFG_BASE + 1 + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount));
+}
+
+void increaseInfusionTemperature()
+{
+  uint8_t temperature = getInfusionTemperature() + 5;
+
+  if (temperature >= 95)
+  {
+    temperature = 40;
+  }
+
+  EEPROM.write(EEPROM_INFUSION_CFG_BASE + 1 + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount), temperature);
 }
 
 //
@@ -192,7 +205,7 @@ void setup()
   }
 
   // Uncomment to program EEPROM first time.
-  setupDefaultTeas();
+  //setupDefaultTeas();
 }
 
 //
@@ -453,6 +466,10 @@ void click()
     EEPROM.write(EEPROM_INFUSIONS_COUNT, infusionsCount);
 
     break;
+  case MODE_TEA_PROGRAM_TEMPERATURE:
+    increaseInfusionTemperature();
+
+    break;
   }
 }
 
@@ -469,6 +486,9 @@ void longPress()
 
     resetInfusions();
     break;
+  case MODE_TEA_SELECTION:
+    mode = MODE_TEA_PROGRAM_TEMPERATURE;
+    infusionsCount = 0;
   }
 }
 
@@ -529,6 +549,10 @@ void showCurrentTeaType()
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
 
+void showCurrentTeaProgramTemperature()
+{
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Main loop.
 // Keep checking the input button and run the timer if needed.
@@ -558,6 +582,15 @@ void teaSelectionLoop()
   delay(50);
 }
 
+void teaProgramTemperatureLoop()
+{
+  checkButton();
+
+  showCurrentInfusion();
+
+  delay(50);
+}
+
 void loop()
 {
   switch (mode)
@@ -567,6 +600,9 @@ void loop()
     break;
   case MODE_TEA_SELECTION:
     teaSelectionLoop();
+    break;
+  case MODE_TEA_PROGRAM_TEMPERATURE:
+    teaProgramTemperatureLoop();
     break;
   }
 }
