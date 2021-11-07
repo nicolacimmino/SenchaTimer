@@ -44,6 +44,7 @@
 
 #define MAX_INFUSIONS 5
 #define MAX_TEA_TYPES 6
+#define MAX_TEMPERATURES 6
 #define MODE_INFUSION 0
 #define MODE_TEA_SELECTION 1
 #define MODE_TEA_PROGRAM_TEMPERATURE 2
@@ -135,13 +136,22 @@ void setupDefaultTeas()
   EEPROM.write(60, 0);
 }
 
-CRGB teaTypeColors[MAX_TEA_TYPES] = {
-    CRGB::Red,
+CRGB teaTypeColors[MAX_TEA_TYPES] = {    
     CRGB::Blue,
     CRGB::Yellow,
     CRGB::Green,
     CRGB::White,
     CRGB::Purple,
+    CRGB::Red,
+};
+
+CRGB temperatureColors[MAX_TEMPERATURES] = {    
+    CRGB::Blue,   // Room
+    CRGB::Yellow, // 50
+    CRGB::Green,  // 60
+    CRGB::White,  // 70
+    CRGB::Purple, // 80
+    CRGB::Red,    // 90
 };
 
 uint16_t getInfusionTime()
@@ -153,6 +163,11 @@ void writeInfusionTime()
 {
   uint8_t infusionTime = ((millis() - infusionStartTime) / 1000.0) / 5;
   EEPROM.write(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount), infusionTime);
+
+  if (infusionsCount < (MAX_INFUSIONS - 1))
+  {
+    EEPROM.write(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * (infusionsCount + 1)), 0);
+  }
 }
 
 uint8_t getInfusionTemperature()
@@ -162,13 +177,8 @@ uint8_t getInfusionTemperature()
 
 void increaseInfusionTemperature()
 {
-  uint8_t temperature = getInfusionTemperature() + 10;
-
-  if (temperature > 90)
-  {
-    temperature = 45;
-  }
-
+  uint8_t temperature = (getInfusionTemperature() + 1) % MAX_TEMPERATURES;
+  
   EEPROM.write(EEPROM_INFUSION_CFG_BASE + 1 + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount), temperature);
 }
 
@@ -239,8 +249,9 @@ void showCurrentInfusion()
   // Temperature range 45 - 90C => 45
   // Color range: Green (96) - Red (255) => 159
   // Hue = 159 * ((temp - 30) / 45) + 96
-  led[TIME_LED_IX] = CHSV(96 + 159 * ((getInfusionTemperature() - 30) / 45.0), 255, 255);
-
+  //led[TIME_LED_IX] = CHSV(96 + 159 * ((getInfusionTemperature() - 30) / 45.0), 255, 255);
+  led[TIME_LED_IX] = temperatureColors[getInfusionTemperature()];
+  
   uint16_t timeSlot = (millis() % 3000) / 200;
 
   if (timeSlot > (2 * (infusionsCount + 1)) || timeSlot % 2 == 0)
@@ -507,6 +518,9 @@ void click()
 
 void longPress()
 {
+  led[TIME_LED_IX] = CRGB::Black;
+  FastLED.show();
+
   switch (mode)
   {
   case MODE_INFUSION:
