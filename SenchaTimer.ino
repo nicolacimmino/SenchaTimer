@@ -162,11 +162,11 @@ uint8_t getInfusionTemperature()
 
 void increaseInfusionTemperature()
 {
-  uint8_t temperature = getInfusionTemperature() + 5;
+  uint8_t temperature = getInfusionTemperature() + 10;
 
-  if (temperature >= 95)
+  if (temperature > 90)
   {
-    temperature = 40;
+    temperature = 45;
   }
 
   EEPROM.write(EEPROM_INFUSION_CFG_BASE + 1 + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount), temperature);
@@ -185,7 +185,7 @@ void setup()
   delay(300);
 
   FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(led, LEDS_COUNT);
-  FastLED.setBrightness(70);
+  FastLED.setBrightness(255);
   led[TIME_LED_IX] = CRGB::Black;
   FastLED.show();
 
@@ -236,24 +236,16 @@ void setup()
 
 void showCurrentInfusion()
 {
-  // Temperature range 70 - 90C => 20
+  // Temperature range 45 - 90C => 45
   // Color range: Green (96) - Red (255) => 159
-  // Hue = 159 * ((temp - 70) / 20) + 96
-  if ((getInfusionTemperature() != 0))
-  {
-    led[TIME_LED_IX] = CHSV(96 + 159 * ((getInfusionTemperature() - 70) / 20.0), 255, 255);
-  }
-  else
-  {
-    // Zero indicates room temperature infusion, use black so we don't need to stretch too much the range above.
-    led[TIME_LED_IX] = CRGB::White;
-  }
+  // Hue = 159 * ((temp - 30) / 45) + 96
+  led[TIME_LED_IX] = CHSV(96 + 159 * ((getInfusionTemperature() - 30) / 45.0), 255, 255);
 
   uint16_t timeSlot = (millis() % 3000) / 200;
 
   if (timeSlot > (2 * (infusionsCount + 1)) || timeSlot % 2 == 0)
   {
-    led[TIME_LED_IX].fadeToBlackBy(240);
+    led[TIME_LED_IX].fadeToBlackBy(160);
   }
 
   FastLED.show();
@@ -484,7 +476,7 @@ void click()
     break;
   case MODE_TEA_SELECTION:
     teaType = (teaType + 1) % MAX_TEA_TYPES;
-    
+
     EEPROM.write(EEPROM_TEA_TYPE, teaType);
 
     infusionsCount = 0;
