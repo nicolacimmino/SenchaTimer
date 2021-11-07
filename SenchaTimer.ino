@@ -47,6 +47,7 @@
 #define MODE_INFUSION 0
 #define MODE_TEA_SELECTION 1
 #define MODE_TEA_PROGRAM_TEMPERATURE 2
+#define MODE_TEA_PROGRAM_DURATION 3
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -145,8 +146,13 @@ CRGB teaTypeColors[MAX_TEA_TYPES] = {
 
 uint16_t getInfusionTime()
 {
-  Serial.println(5 * EEPROM.read(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount)));
   return 5 * EEPROM.read(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount));
+}
+
+void writeInfusionTime()
+{
+  uint8_t infusionTime = ((millis() - infusionStartTime) / 1000.0) / 5;
+  EEPROM.write(EEPROM_INFUSION_CFG_BASE + (teaType * EEPROM_INFUSION_CFG_TEA_ENTRY_SIZE) + (EEPROM_INFUSION_CFG_ENTRY_SIZE * infusionsCount), infusionTime);
 }
 
 uint8_t getInfusionTemperature()
@@ -255,6 +261,32 @@ void showCurrentInfusion()
 
 //
 /////////////////////////////////////////////////////////////////////////////////////////////
+
+void showCurrentInfusionTimeProgramming()
+{
+  led[TIME_LED_IX] = CRGB::Red;
+
+  uint16_t timeSlot = (millis() % 3000) / 200;
+
+  if (timeSlot > (2 * (infusionsCount + 1)) || timeSlot % 2 == 0)
+  {
+    led[TIME_LED_IX].fadeToBlackBy(240);
+  }
+
+  FastLED.show();
+}
+
+void showTimerRunningProgramming()
+{
+  led[TIME_LED_IX] = CRGB::Red;
+
+  // Keep breathing! See Sean Voisen great post from which I grabbed the formula.
+  // https://sean.voisen.org/blog/2011/10/breathing-led-with-arduino/
+  float val = (exp(sin(millis() / 2000.0 * PI)) - 0.36787944) * 108.0;
+
+  led[TIME_LED_IX].fadeToBlackBy(val);
+  FastLED.show();
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // Show that the timer is running.
@@ -452,13 +484,7 @@ void click()
     break;
   case MODE_TEA_SELECTION:
     teaType = (teaType + 1) % MAX_TEA_TYPES;
-
-    // End marker, following tea types are not set
-    if (getInfusionTime() == 0)
-    {
-      teaType = 0;
-    }
-
+    
     EEPROM.write(EEPROM_TEA_TYPE, teaType);
 
     infusionsCount = 0;
@@ -470,6 +496,20 @@ void click()
     increaseInfusionTemperature();
 
     break;
+  case MODE_TEA_PROGRAM_DURATION:
+    if (infusionStartTime == 0)
+    {
+      infusionStartTime = millis();
+    }
+    else
+    {
+      writeInfusionTime();
+      infusionStartTime = 0;
+      infusionsCount += 1;
+      mode = MODE_TEA_PROGRAM_TEMPERATURE;
+
+      break;
+    }
   }
 }
 
@@ -489,9 +529,15 @@ void longPress()
   case MODE_TEA_SELECTION:
     mode = MODE_TEA_PROGRAM_TEMPERATURE;
     infusionsCount = 0;
+    break;
+  case MODE_TEA_PROGRAM_TEMPERATURE:
+    mode = MODE_TEA_PROGRAM_DURATION;
+    break;
+  case MODE_TEA_PROGRAM_DURATION:
+    infusionStartTime = 0;
+    break;
   }
 }
-
 void checkButton()
 {
   unsigned long pressStartTime = 0;
@@ -591,6 +637,20 @@ void teaProgramTemperatureLoop()
   delay(50);
 }
 
+void teaProgramDurationLoop()
+{
+  checkButton();
+
+  if (infusionStartTime == 0)
+  {
+    showCurrentInfusionTimeProgramming();
+
+    return;
+  }
+
+  showTimerRunningProgramming();
+}
+
 void loop()
 {
   switch (mode)
@@ -603,6 +663,9 @@ void loop()
     break;
   case MODE_TEA_PROGRAM_TEMPERATURE:
     teaProgramTemperatureLoop();
+    break;
+  case MODE_TEA_PROGRAM_DURATION:
+    teaProgramDurationLoop();
     break;
   }
 }
